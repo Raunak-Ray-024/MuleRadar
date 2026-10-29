@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuleRadar – UPI Mule-Ring Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--deep:#023e6b;--sea:#0077b6;--sky:#00a6d6;--foam:#90e0ef;--mist:#e6f6fc;--bg:#f4fbfe;--card:#fff;--ink:#0a2540;--mute:#4b6a85;--line:#cfe6f1;--bad:#c62f4b;--ok:#12805c}
+[data-theme=deep]{--bg:#04233f;--card:#0a3558;--ink:#eaf8ff;--mute:#9cc4dc;--line:#14507c;--mist:#0b3d66}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',system-ui,sans-serif;font-size:17px;line-height:1.6;background:var(--bg);color:var(--ink);transition:background .4s,color .4s}
+h1,h2,h3{font-family:Sora,'DM Sans',sans-serif;line-height:1.2}
+h1{font-size:clamp(2.4rem,5vw,3.8rem)}h2{font-size:2rem;margin-bottom:.4rem}h3{font-size:1.2rem}
+button,input,select{font:inherit}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:1rem;padding:.7rem 2rem;background:linear-gradient(90deg,var(--deep),var(--sea));color:#fff;flex-wrap:wrap}
+.logo{font:800 1.5rem Sora;display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-right:auto}
+.links{display:flex;gap:.3rem;flex-wrap:wrap}
+.links a{color:#dff5ff;padding:.45rem .9rem;border-radius:99px;cursor:pointer;font-weight:500;transition:.25s}
+.links a:hover{background:rgba(255,255,255,.15)}.links a.on{background:#fff;color:var(--deep)}
+.tg{display:flex;align-items:center;gap:.5rem;font-size:.95rem}
+.sw{width:50px;height:26px;border-radius:99px;background:rgba(255,255,255,.3);border:0;position:relative;cursor:pointer}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .35s cubic-bezier(.5,1.6,.5,1)}
+.sw.on{background:var(--foam)}.sw.on::after{transform:translateX(24px)}
+.btn{background:var(--sea);color:#fff;border:0;border-radius:10px;padding:.65rem 1.3rem;font-weight:700;cursor:pointer;transition:transform .2s,background .2s}
+.btn:hover{background:var(--deep);transform:translateY(-2px)}
+.btn.alt{background:#fff;color:var(--deep)}.btn.ghost{background:transparent;border:2px solid var(--sea);color:var(--sea)}
+.btn.bad{background:var(--bad)}.btn.ok{background:var(--ok)}.btn:disabled{opacity:.5;cursor:wait}
+.page{display:none}.page.show{display:block}
+.wrap{max-width:1150px;margin:0 auto;padding:2.2rem 1.5rem 4rem}
+/* hero */
+.hero{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--deep),var(--sea) 70%,var(--sky));color:#fff;padding:4.5rem 2rem 9rem}
+.hero .in{max-width:1150px;margin:auto;display:grid;grid-template-columns:1.1fr .9fr;gap:2rem;align-items:center}
+.hero p{font-size:1.2rem;color:#d8f3ff;margin:1.2rem 0 1.8rem;max-width:34rem}
+.hero .row{display:flex;gap:1rem;flex-wrap:wrap}
+.radar{width:min(400px,80vw);aspect-ratio:1;border-radius:50%;margin:auto;position:relative;border:3px solid var(--foam);background:repeating-radial-gradient(circle,transparent 0 44px,rgba(144,224,239,.45) 45px 46px),radial-gradient(circle,#0a5a94,#032f55);box-shadow:0 0 60px rgba(0,210,255,.4)}
+.radar::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(144,224,239,.8),transparent 30%);animation:spin 4s linear infinite}
+.radar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(144,224,239,.4)}
+.blip{position:absolute;width:14px;height:14px;border-radius:50%;background:#ff5d7a;box-shadow:0 0 0 0 rgba(255,93,122,.8);animation:ping 2.4s infinite;z-index:2}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(255,93,122,.8)}80%,100%{box-shadow:0 0 0 24px rgba(255,93,122,0)}}
+.waves{position:absolute;left:0;right:0;bottom:-1px;height:130px}
+.waves path{animation:drift 9s ease-in-out infinite alternate}
+.waves path:nth-child(2){animation-duration:13s;animation-direction:alternate-reverse}
+@keyframes drift{to{transform:translateX(-120px)}}
+.bub{position:absolute;bottom:-30px;border-radius:50%;border:2px solid rgba(255,255,255,.5);animation:rise linear infinite}
+@keyframes rise{to{transform:translateY(-110vh)}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:-4rem;position:relative;z-index:3}
+.stat{background:var(--card);border-radius:16px;padding:1.4rem;text-align:center;box-shadow:0 10px 30px rgba(2,62,107,.15)}
+.stat b{display:block;font:800 2.3rem Sora;color:var(--sea)}
+.sec{margin-top:4rem}.sub{color:var(--mute);max-width:40rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-top:1.5rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.5rem;transition:transform .3s,box-shadow .3s}
+.card:hover{transform:translateY(-5px);box-shadow:0 12px 28px rgba(0,119,182,.18)}
+.card svg{width:56px;height:56px;margin-bottom:.8rem}
+.flow{display:flex;gap:.8rem;margin-top:1.5rem;flex-wrap:wrap}
+.flow div{flex:1 1 170px;background:var(--mist);border-left:5px solid var(--sea);padding:1rem;border-radius:10px}
+.flow b{display:block;color:var(--sea)}
+.net{width:100%;max-width:560px;margin:auto;display:block}
+.net line{stroke:var(--sky);stroke-width:2;stroke-dasharray:6 6;animation:dash 1.2s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-12}}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:center}
+footer{background:var(--deep);color:#bfe9f8;text-align:center;padding:2rem;font-size:.95rem}
+/* app */
+.head{background:linear-gradient(90deg,var(--deep),var(--sea));color:#fff;padding:2rem}
+.head div{max-width:1150px;margin:auto}.head p{color:#d8f3ff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+label{display:block;font-weight:700;margin:.8rem 0 .25rem;font-size:.95rem}
+input,select{width:100%;padding:.65rem .8rem;border:2px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+input:focus,select:focus{border-color:var(--sky);outline:0}
+.gauge{height:16px;border-radius:99px;background:linear-gradient(90deg,#7fd8ee,#ffd37a,#ff5d7a);position:relative;margin:1rem 0 .4rem}
+.gauge i{position:absolute;top:-6px;width:6px;height:28px;border-radius:3px;background:var(--deep);transition:left .9s cubic-bezier(.2,1.3,.4,1)}
+.gauge i.t{background:var(--ink);opacity:.45}
+.pill{display:inline-block;padding:.15rem .7rem;border-radius:99px;font-size:.85rem;font-weight:700;background:var(--mist);color:var(--sea)}
+.pill.bad{background:#ffe0e6;color:var(--bad)}.pill.ok{background:#d9f5ea;color:var(--ok)}
+.chips{display:flex;flex-wrap:wrap;gap:.35rem;margin:.6rem 0}
+.chips span{background:var(--mist);padding:.1rem .6rem;border-radius:8px;font-size:.88rem}
+pre.rep{white-space:pre-wrap;font:inherit;background:var(--mist);padding:1rem;border-radius:10px;max-height:260px;overflow:auto;margin:.6rem 0}
+.tabs{display:flex;gap:.5rem;margin:1rem 0}.tabs .btn{padding:.45rem 1rem}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--line)}th{color:var(--sea)}
+.scroll{overflow-x:auto}
+.list{display:grid;gap:1rem;margin-top:1rem}
+.msg{padding:1.2rem;text-align:center;color:var(--mute);border:2px dashed var(--line);border-radius:12px}
+#toast{position:fixed;right:1.2rem;bottom:1.2rem;z-index:300;display:grid;gap:.5rem}
+#toast div{background:var(--deep);color:#fff;padding:.8rem 1.1rem;border-radius:10px;border-left:6px solid var(--foam);animation:pop .4s}
+#toast div.e{border-color:#ff5d7a}
+@keyframes pop{from{transform:translateX(120%)}}
+dialog{border:0;border-radius:18px;padding:2rem;width:min(430px,92vw);background:var(--card);color:var(--ink);box-shadow:0 30px 80px rgba(2,62,107,.5)}
+dialog::backdrop{background:rgba(2,62,107,.6)}
+/* sign-in gate */
+#gate{display:none;position:relative;min-height:100vh;overflow:hidden;background:linear-gradient(180deg,var(--deep),var(--sea) 75%,var(--sky));color:#fff;place-items:center;padding:3rem 1.5rem 9rem}
+body.locked #gate{display:grid}
+body.locked nav,body.locked .page{display:none!important}
+.gwrap{max-width:1050px;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;position:relative;z-index:2}
+.gwrap>div:first-child p{font-size:1.15rem;color:#d8f3ff;margin-top:1rem;max-width:30rem}
+.gwrap .radar{width:min(300px,60vw);margin:0 0 1.5rem}
+.gcard{background:var(--card);color:var(--ink);border-radius:20px;padding:2rem;box-shadow:0 30px 70px rgba(2,40,80,.45)}
+.roles,.mode{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin:1rem 0}
+.role{text-align:left;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:.9rem;cursor:pointer;transition:.25s}
+.role b{display:block;font:700 1.15rem Sora}.role span{font-size:.9rem;color:var(--mute);line-height:1.4;display:block}
+.role:hover{transform:translateY(-3px)}.role.sel{border-color:var(--sea);background:var(--mist);box-shadow:0 0 0 3px rgba(0,166,214,.3)}
+.mode{background:var(--mist);padding:.3rem;border-radius:12px;gap:.3rem;margin:.2rem 0 .6rem}
+.mode button{border:0;background:transparent;color:var(--ink);padding:.5rem;border-radius:9px;font-weight:700;cursor:pointer;transition:.25s}
+.mode button.sel{background:var(--sea);color:#fff}
+textarea{width:100%;min-height:150px;padding:.65rem .8rem;border:2px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;resize:vertical}
+textarea:focus{border-color:var(--sky);outline:0}
+ul.pt{padding-left:1.2rem;margin:.4rem 0}ul.pt li{margin:.25rem 0}
+body.guest .staff{display:none}
+/* wave page transition */
+#wave{position:fixed;left:0;right:0;top:-150px;height:calc(100vh + 300px);z-index:200;pointer-events:none;transform:translateY(calc(100vh + 160px));display:flex;flex-direction:column}
+#wave svg{height:150px;width:100%;flex:none;display:block}
+#wave .fill{flex:1;background:var(--sea)}
+@media(max-width:850px){.hero .in,.two,.split,.grid3,.gwrap{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}nav{padding:.7rem 1rem}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="locked">
+<section id="gate">
+  <div class="gwrap">
+    <div>
+      <div class="radar" aria-hidden="true"><span class="blip" style="left:28%;top:30%"></span><span class="blip" style="left:68%;top:42%;animation-delay:.8s"></span><span class="blip" style="left:52%;top:72%;animation-delay:1.5s"></span></div>
+      <h1>MuleRadar</h1>
+      <p>Sign in with your role to score accounts, review mule rings and decide cases.</p>
+    </div>
+    <div class="gcard">
+      <h2>Sign in</h2><p class="sub">Choose your role, then enter your API key.</p>
+      <div class="roles">
+        <button class="role sel" data-r="admin"><b>Admin</b><span>Approve cases, label accounts, manage users and the model</span></button>
+        <button class="role" data-r="analyst"><b>Analyst</b><span>Score accounts, add transactions, review rings, generate cases</span></button>
+      </div>
+      <div class="mode"><button class="sel" data-m="demo">Demo data</button><button data-m="live">Live server</button></div>
+      <div id="liveBox" style="display:none"><label for="base">API address</label><input id="base" value="http://127.0.0.1:8000"></div>
+      <label for="key">API key</label><input id="key" type="password" autocomplete="off" placeholder="Paste your X-API-Key">
+      <p class="sub" id="gateHint" style="font-size:.9rem;margin:.6rem 0 1rem">Demo mode needs no key. Leave it empty, or type admin or analyst.</p>
+      <button class="btn" id="goBtn" style="width:100%">Sign in</button>
+      <button class="btn ghost" id="guestBtn" style="width:100%;margin-top:.7rem">Continue as an individual (no key needed)</button>
+    </div>
+  </div>
+  <svg class="waves" viewBox="0 0 1440 130" preserveAspectRatio="none"><path fill="rgba(255,255,255,.4)" d="M-120 60C100 10 260 110 480 60S860 10 1080 60 1380 110 1560 60V130H-120Z"/><path fill="var(--bg)" d="M-120 85C120 40 300 120 520 85S900 45 1120 85 1400 120 1560 85V130H-120Z"/></svg>
+</section>
+<nav>
+  <div class="logo" onclick="go('home')"><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="none" stroke="#90e0ef" stroke-width="2.5"/><circle cx="16" cy="16" r="7" fill="none" stroke="#90e0ef" stroke-width="2"/><path d="M16 16L27 8" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>MuleRadar</div>
+  <div class="links" id="links">
+    <a data-p="home">Home</a><a data-p="check">Pay check</a><a data-p="msg">Scam check</a><a class="staff" data-p="dash">Dashboard</a><a class="staff" data-p="scan">Scan</a><a class="staff" data-p="rings">Rings</a><a class="staff" data-p="cases">Cases</a><a class="staff" data-p="admin">Admin</a>
+  </div>
+  <span class="pill" id="modeTag">Demo</span>
+  <div class="tg"><span>Deep sea</span><button class="sw" id="themeSw" aria-label="Toggle theme"></button></div>
+  <button class="btn alt" id="loginBtn">Sign out</button>
+</nav>
+
+<!-- LANDING -->
+<section class="page show" id="p-home">
+  <div class="hero" id="hero">
+    <div class="in">
+      <div>
+        <h1>Catch mule accounts before the money disappears.</h1>
+        <p>MuleRadar scores UPI accounts with machine learning, uncovers whole mule rings, and drafts case reports that a human admin approves.</p>
+        <div class="row"><button class="btn alt" onclick="go('check')">Check before you pay</button><button class="btn alt" onclick="go('scan')">Scan an account</button><button class="btn ghost" style="color:#fff;border-color:#fff" onclick="go('rings')">View rings</button></div>
+      </div>
+      <div class="radar" aria-hidden="true">
+        <span class="blip" style="left:28%;top:30%"></span><span class="blip" style="left:68%;top:42%;animation-delay:.8s"></span><span class="blip" style="left:52%;top:72%;animation-delay:1.5s"></span>
+      </div>
+    </div>
+    <svg class="waves" viewBox="0 0 1440 130" preserveAspectRatio="none"><path fill="rgba(255,255,255,.4)" d="M-120 60C100 10 260 110 480 60S860 10 1080 60 1380 110 1560 60V130H-120Z"/><path fill="var(--bg)" d="M-120 85C120 40 300 120 520 85S900 45 1120 85 1400 120 1560 85V130H-120Z"/></svg>
+  </div>
+  <div class="wrap" style="padding-top:0">
+    <div class="stats">
+      <div class="stat"><b data-n="0" id="s1">–</b>transactions in database</div>
+      <div class="stat"><b>2</b>roles: analyst and admin</div>
+      <div class="stat"><b>5</b>steps from payment to decision</div>
+      <div class="stat"><b>100%</b>human-approved labels</div>
+    </div>
+    <div class="sec"><h2>What MuleRadar does</h2><p class="sub">One workspace for scoring, ring discovery and case review.</p>
+      <div class="grid3">
+        <div class="card"><svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="24" fill="#e6f6fc" stroke="#0077b6" stroke-width="3"/><path d="M14 36L24 26l8 6 10-14" fill="none" stroke="#0077b6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>Score any account</h3><p>An XGBoost model reads each account's payment history and returns a risk score against a tuned threshold.</p></div>
+        <div class="card"><svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="24" fill="#e6f6fc" stroke="#0077b6" stroke-width="3"/><circle cx="18" cy="20" r="5" fill="#0077b6"/><circle cx="40" cy="22" r="5" fill="#00a6d6"/><circle cx="28" cy="40" r="5" fill="#023e6b"/><path d="M18 20L40 22L28 40Z" fill="none" stroke="#0077b6" stroke-width="2"/></svg><h3>Find whole rings</h3><p>Graph analysis groups accounts that move money together, so you review one ring instead of many single accounts.</p></div>
+        <div class="card"><svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="24" fill="#e6f6fc" stroke="#0077b6" stroke-width="3"/><path d="M19 15h18v26H19z" fill="#fff" stroke="#0077b6" stroke-width="3"/><path d="M23 23h10M23 29h10M23 35h6" stroke="#00a6d6" stroke-width="3" stroke-linecap="round"/></svg><h3>Explained case reports</h3><p>An AI agent applies RBI and NPCI-style rules and writes the case. An admin approves or rejects it.</p></div>
+      </div></div>
+    <div class="sec split">
+      <div><h2>See the ring, not just the node</h2><p class="sub">Mule rings pass money through many accounts in quick hops. MuleRadar links these accounts so an investigator sees the full pattern in one view.</p></div>
+      <svg class="net" viewBox="0 0 560 300"><g stroke-linecap="round"><line x1="80" y1="150" x2="220" y2="70"/><line x1="80" y1="150" x2="220" y2="230"/><line x1="220" y1="70" x2="360" y2="150"/><line x1="220" y1="230" x2="360" y2="150"/><line x1="360" y1="150" x2="490" y2="80"/><line x1="360" y1="150" x2="490" y2="220"/></g>
+        <g fill="#0077b6"><circle cx="80" cy="150" r="22"/><circle cx="220" cy="70" r="18" fill="#00a6d6"/><circle cx="220" cy="230" r="18" fill="#00a6d6"/><circle cx="360" cy="150" r="26" fill="#c62f4b"/><circle cx="490" cy="80" r="16" fill="#023e6b"/><circle cx="490" cy="220" r="16" fill="#023e6b"/></g>
+        <text x="360" y="198" text-anchor="middle" fill="currentColor" font-size="15" font-weight="700">Mule hub</text></svg>
+    </div>
+    <div class="sec"><h2>From payment to decision</h2>
+      <div class="flow"><div><b>1. Ingest</b>New payments arrive through the API.</div><div><b>2. Score</b>The model rates each account.</div><div><b>3. Group</b>Ring detection links accounts.</div><div><b>4. Report</b>The agent drafts a case.</div><div><b>5. Decide</b>An admin approves or rejects; labels feed retraining.</div></div></div>
+  </div>
+  <footer>MuleRadar · UPI mule-ring detection · FastAPI + XGBoost + LangGraph</footer>
+</section>
+
+<!-- DASHBOARD -->
+<section class="page" id="p-dash"><div class="head"><div><h2>Dashboard</h2><p>System status, queue and recent activity.</p></div></div>
+  <div class="wrap"><div class="grid3" id="dashCards"></div>
+  <div class="card" style="margin-top:1.2rem"><h3>Recent audit log</h3><div class="scroll" id="dashAudit"><p class="msg">Sign in as admin to see the audit log.</p></div></div></div></section>
+
+<!-- SCAN -->
+<section class="page" id="p-scan"><div class="head"><div><h2>Scan</h2><p>Score an account or submit a new transaction.</p></div></div>
+  <div class="wrap"><div class="two">
+    <div class="card"><h3>Account score</h3><label for="acc">Account ID</label><input id="acc" placeholder="e.g. 800104D70">
+      <p style="margin-top:1rem"><button class="btn" id="scoreBtn">Score account</button></p><div id="scoreOut"></div></div>
+    <div class="card"><h3>Add transaction</h3>
+      <label for="tS">Sender</label><input id="tS"><label for="tR">Receiver</label><input id="tR">
+      <label for="tA">Amount</label><input id="tA" type="number" min="0" step="0.01">
+      <div class="two"><div><label for="tF">Format</label><select id="tF"><option>ACH</option><option>Cheque</option><option>Credit Card</option><option>Wire</option><option>Reinvestment</option><option>Cash</option><option>Bitcoin</option></select></div><div><label for="tC">Currency</label><input id="tC" value="US Dollar"></div></div>
+      <p style="margin-top:1rem"><button class="btn" id="txBtn">Save and score</button></p><div id="txOut"></div></div>
+  </div></div></section>
+
+<!-- RINGS -->
+<section class="page" id="p-rings"><div class="head"><div><h2>Mule rings</h2><p>Groups of accounts that move money together.</p></div></div>
+  <div class="wrap"><div class="card" style="display:flex;gap:1rem;align-items:end;flex-wrap:wrap"><div><label for="minS">Minimum ring size</label><input id="minS" type="number" min="2" value="3" style="width:140px"></div><button class="btn" id="ringBtn">Load rings</button></div>
+  <div class="list" id="ringList"><p class="msg">Load rings to see results.</p></div></div></section>
+
+<!-- CASES -->
+<section class="page" id="p-cases"><div class="head"><div><h2>Cases</h2><p>Review AI-written reports. Only admins can approve or reject.</p></div></div>
+  <div class="wrap"><div class="tabs" id="caseTabs"><button class="btn" data-s="PENDING">Pending</button><button class="btn ghost" data-s="APPROVED">Approved</button><button class="btn ghost" data-s="REJECTED">Rejected</button></div>
+  <div class="list" id="caseList"><p class="msg">Loading cases…</p></div></div></section>
+
+<!-- ADMIN -->
+<section class="page" id="p-admin"><div class="head"><div><h2>Admin</h2><p>Labels, model operations and background jobs. Admin role required.</p></div></div>
+  <div class="wrap"><div class="two">
+    <div class="card"><h3>Set account label</h3><label for="lA">Account ID</label><input id="lA"><label for="lM">Label</label><select id="lM"><option value="1">Mule</option><option value="0">Normal</option></select>
+      <p style="margin-top:1rem"><button class="btn" id="lblBtn">Save label</button></p></div>
+    <div class="card"><h3>Model and jobs</h3><p class="sub">Retraining uses admin-approved labels. A better model is loaded automatically.</p>
+      <p style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap"><button class="btn" id="reloadBtn">Reload model</button><button class="btn" id="retrainBtn">Retrain</button><button class="btn" id="refRingBtn">Refresh rings</button></p>
+      <label><input type="checkbox" id="rebuild" style="width:auto"> Rebuild features first (slower, needs more RAM)</label><div id="jobs" style="margin-top:.8rem"></div></div>
+  </div>
+  <div class="card" style="margin-top:1.2rem"><h3>Users</h3><p class="sub">Deleting a user stops their API key working immediately. Their past audit entries stay.</p><p><button class="btn ghost" id="usrBtn" style="margin:.6rem 0">Refresh users</button></p><div class="scroll" id="userList"></div></div>
+  <div class="card" style="margin-top:1.2rem"><h3>Create user</h3><p class="sub">Creates an analyst or admin and shows the API key once. Only a hash is stored, so the key cannot be shown again.</p>
+    <div class="two"><div><label for="uN">Username</label><input id="uN" autocomplete="off"></div><div><label for="uR">Role</label><select id="uR"><option value="analyst">Analyst</option><option value="admin">Admin</option></select></div></div>
+    <p style="margin-top:1rem"><button class="btn" id="userBtn">Create user</button></p><div id="userOut"></div></div>
+  <div class="card" style="margin-top:1.2rem"><h3>Audit log</h3><p><button class="btn ghost" id="audBtn" style="margin:.6rem 0">Refresh</button></p><div class="scroll" id="audit"></div></div></div></section>
+
+<!-- PAY CHECK -->
+<section class="page" id="p-check"><div class="head"><div><h2>Check before you pay</h2><p>Look up a UPI ID or mobile number before you send money.</p></div></div>
+  <div class="wrap"><div class="two">
+    <div class="card"><h3>Check a UPI ID or number</h3><label for="cU">UPI ID or mobile number</label><input id="cU" placeholder="e.g. name@oksbi or 9876543210" autocomplete="off">
+      <p style="margin-top:1rem"><button class="btn" id="chkBtn">Check</button></p><div id="chkOut"></div></div>
+    <div class="card"><h3>Rules that always apply</h3><ul class="pt"><li>Receiving money never needs your UPI PIN. If an app asks for it, you are paying.</li><li>Check the name your UPI app shows before you pay.</li><li>Never share an OTP, PIN or CVV with anyone.</li><li>Be careful with "refund", "KYC update" and "easy task" offers.</li></ul>
+      <h3 style="margin-top:1.2rem">Already lost money?</h3><p>Call <b>1930</b> straight away and report at <b>cybercrime.gov.in</b>. Then tell your bank. Reporting quickly gives the best chance of stopping the money.</p></div>
+  </div></div></section>
+
+<!-- SCAM MESSAGE CHECK -->
+<section class="page" id="p-msg"><div class="head"><div><h2>Scam message check</h2><p>Paste an SMS, WhatsApp message or email and see if it looks like a scam.</p></div></div>
+  <div class="wrap"><div class="card"><label for="msgTxt">Message</label><textarea id="msgTxt" maxlength="2000" placeholder="Paste the message here. Remove OTPs, PINs and card numbers first."></textarea>
+    <p class="sub" style="font-size:.9rem;margin-top:.4rem">Your message is checked and not stored. Do not include OTPs, PINs or card details.</p>
+    <p style="margin-top:1rem"><button class="btn" id="msgBtn">Analyze message</button></p></div><div id="msgOut"></div></div></section>
+
+<div id="wave"><svg viewBox="0 0 1440 150" preserveAspectRatio="none"><path fill="#0077b6" d="M0 150V70C180 10 320 130 540 70S900 10 1100 70 1340 120 1440 60V150Z"/></svg><div class="fill"></div><svg viewBox="0 0 1440 150" preserveAspectRatio="none" style="transform:scaleY(-1)"><path fill="#0077b6" d="M0 150V70C180 10 320 130 540 70S900 10 1100 70 1340 120 1440 60V150Z"/></svg></div>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const S={live:false,key:'',role:null,base:'http://127.0.0.1:8000',st:'PENDING'};
+function toast(m,e){const d=document.createElement('div');d.textContent=m;if(e)d.className='e';$('#toast').append(d);setTimeout(()=>d.remove(),4200)}
+
+/* ---------- demo data (used when the Demo toggle is on) ---------- */
+const D={tx:184230,rings:[{ring_id:1,size:5,accounts:['8001A','8002B','8003C','8004D','8005E'],total_amount:412000},{ring_id:2,size:3,accounts:['9101X','9102Y','9103Z'],total_amount:96500},{ring_id:3,size:4,accounts:['7701M','7702N','7703P','7704Q'],total_amount:158200}],
+cases:[{case_id:1,ring_id:2,accounts:['9101X','9102Y','9103Z'],status:'PENDING',created_at:'2026-10-17 11:20:05',report:'SUMMARY: Three accounts moved 96,500 within two hours using rapid pass-through transfers.\nRULE MATCH: Rapid movement of funds with no retained balance (RBI mule-account guidance).\nRECOMMENDATION: Freeze and refer for human review.'}],audit:[{ts:'2026-10-17 11:20:05',user:'admin',action:'GENERATE',detail:'ring 2 -> case 1'},{ts:'2026-10-16 18:02:44',user:'admin',action:'RELOAD_MODEL',detail:'threshold=0.3120'}],jobs:{rings:{state:'idle'},retrain:{state:'idle'}},keys:{},users:[{username:'admin',role:'admin'},{username:'analyst',role:'analyst'}]};
+function demo(path,method,body){
+  const adminOnly=/^\/(users|label|jobs|retrain|reload-model|audit|rings\/refresh|cases\/\d+\/(approve|reject))/.test(path);
+  if(adminOnly&&S.role!=='admin')throw Error('analyst ko iski ijazat nahi (admin only)');
+  if(path.startsWith('/public/check')){const u=decodeURIComponent(path.split('upi=')[1]||'').toLowerCase().replace(/\s/g,'');const ok=/^[\w.\-]{2,}@[a-z]{2,}$/.test(u)||/^[6-9]\d{9}$/.test(u),bad=/kyc|refund|lottery|reward|cashback|helpdesk|support|prize/.test(u),known=/@(oksbi|okaxis|okhdfcbank|okicici|ybl|paytm|ibl|axl|upi)$/.test(u),re=[];
+    if(!ok)re.push('This does not look like a valid UPI ID or mobile number.');if(bad)re.push('The ID contains words scammers often use, such as refund, KYC, reward or support.');if(ok&&u.includes('@')&&!known)re.push('The part after @ is not one of the common bank handles.');
+    const risk=!ok||bad?'HIGH':re.length?'MEDIUM':'LOW';return{upi:u,risk,label:{HIGH:'High risk',MEDIUM:'Be careful',LOW:'No warning signs found'}[risk],summary:risk==='HIGH'?'Do not pay until you have checked this through another channel.':'Always check the name your UPI app shows before you pay.',reasons:re.length?re:['No reports and no suspicious pattern found. This does not prove the account is safe.'],approved_reports:0,pending_reports:0}}
+  if(path==='/public/report')return{saved:true,status:'PENDING'};
+  if(path==='/public/analyze-message'){const t=body.text.toLowerCase(),R=[[/\botp\b|\bcvv\b|\bpin\b/,'Asks for an OTP, PIN or CVV. Banks and UPI apps never ask for these.'],[/urgent|immediately|blocked|suspend/,'Creates urgency or threatens to block your account.'],[/\bkyc\b|aadhaar|\bpan\b/,'Asks you to update KYC or share ID details through a message or link.'],[/https?:\/\/|bit\.ly|tinyurl/,'Contains a link. Do not open links in unexpected messages.'],[/refund|cashback|lottery|reward|prize|you have won/,'Promises money, a refund, a reward or a prize.'],[/part.?time|work from home|like and earn/,'Offers easy money for simple online tasks.']],f=R.filter(x=>x[0].test(t)).map(x=>x[1]);
+    return{verdict:f.length>1?'SCAM':f.length?'SUSPICIOUS':'LIKELY_SAFE',scam_type:f.length?'Possible scam pattern':'No known scam pattern',explanation:'',red_flags:f,what_to_do:['Do not click links, call numbers in the message, or reply to it.','Never share an OTP, UPI PIN, card number or CVV.','If you already paid or shared details, call 1930 and report at cybercrime.gov.in.']}}
+  if(path==='/')return{status:'ok',transactions_in_db:D.tx};
+  if(path.startsWith('/score/')){const a=decodeURIComponent(path.slice(7));let h=0;for(const c of a)h=(h*31+c.charCodeAt(0))%1000;const s=h/1000*0.9;return{account:a,score:+s.toFixed(4),is_suspicious:s>=.31,threshold:.312,transactions_seen:20+h%300}}
+  if(path==='/transactions'){D.tx++;return{saved:true,sender:demo('/score/'+body.sender),receiver:demo('/score/'+body.receiver)}}
+  if(path.startsWith('/rings?'))return D.rings.filter(r=>r.size>=+new URLSearchParams(path.split('?')[1]).get('min_size'));
+  if(path.startsWith('/cases?')){const s=new URLSearchParams(path.split('?')[1]).get('status');return D.cases.filter(c=>c.status===s)}
+  const g=path.match(/^\/cases\/generate\/(\d+)/);if(g){const r=D.rings.find(x=>x.ring_id==g[1]);let c=D.cases.find(x=>x.ring_id==r.ring_id);if(c)return{case_id:c.case_id,status:c.status,note:'is ring ka case pehle se hai'};c={case_id:D.cases.length+1,ring_id:r.ring_id,accounts:r.accounts,status:'PENDING',created_at:new Date().toISOString().slice(0,19).replace('T',' '),report:`SUMMARY: ${r.size} linked accounts moved ${r.total_amount} in rapid hops.\nRULE MATCH: Layering through pass-through accounts.\nRECOMMENDATION: Escalate to human review.`};D.cases.push(c);return{case_id:c.case_id,status:'PENDING',report:c.report}}
+  const d=path.match(/^\/cases\/(\d+)\/(approve|reject)/);if(d){const c=D.cases.find(x=>x.case_id==d[1]);c.status=d[2]==='approve'?'APPROVED':'REJECTED';return{case_id:c.case_id,status:c.status,accounts_labelled:c.accounts.length}}
+  if(path==='/users'&&method==='GET')return D.users;
+  const du=path.match(/^\/users\/(.+)/);if(du&&method==='DELETE'){const n=decodeURIComponent(du[1]);D.users=D.users.filter(x=>x.username!==n);return{deleted:true,username:n}}
+  if(path==='/users'){D.users.push({username:body.username,role:body.role});const k='demo-'+Math.random().toString(36).slice(2,14);D.keys[k]=body.role;return{username:body.username,role:body.role,api_key:k}}
+  if(path==='/label')return{saved:true,...body};
+  if(path==='/reload-model')return{reloaded:true,threshold:.312};
+  if(path==='/retrain'||path.startsWith('/rings/refresh')){const n=path==='/retrain'?'retrain':'rings';D.jobs[n]={state:'running',started:'now',by:'admin'};setTimeout(()=>D.jobs[n]={state:'done',finished:'now',model_replaced:n==='retrain',output_tail:'model REPLACED'},3500);return{started:true,job:n}}
+  if(path==='/jobs')return D.jobs;
+  if(path.startsWith('/audit'))return D.audit;
+}
+async function api(path,method='GET',body){
+  if(!S.live){await new Promise(r=>setTimeout(r,350));return demo(path,method,body)}
+  const r=await fetch(S.base+path,{method,headers:{'X-API-Key':S.key,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw Error(typeof j.detail==='string'?j.detail:r.statusText);
+  return j;
+}
+const need=()=>{if(!S.role){toast('Please sign in first.',1);sweep(lock);return false}return true};
+async function run(btn,fn){if(!need())return;btn.disabled=true;try{await fn()}catch(e){toast(e.message,1)}btn.disabled=false}
+
+/* ---------- navigation with wave transition ---------- */
+const wave=$('#wave');let busy=false,cur='home';
+function show(p){$$('.page').forEach(x=>x.classList.toggle('show',x.id==='p-'+p));$$('#links a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));scrollTo(0,0);cur=p;try{sessionStorage.setItem('mrp',p)}catch(_){}if(p==='dash')loadDash();if(p==='cases')loadCases();if(p==='admin'&&S.role==='admin')loadAdmin()}
+function go(p){if(S.role==='guest'&&['dash','scan','rings','cases','admin'].includes(p))return toast('Those pages need an analyst or admin sign-in.',1);sweep(()=>show(p),p)}
+function sweep(fn,p){if(busy||p===cur)return;busy=true;
+  wave.style.transition='none';wave.style.transform='translateY(calc(100vh + 160px))';wave.offsetHeight;
+  wave.style.transition='transform .6s cubic-bezier(.6,0,.3,1)';wave.style.transform='translateY(0)';
+  setTimeout(()=>{fn();wave.style.transition='transform .7s cubic-bezier(.6,0,.3,1)';wave.style.transform='translateY(calc(-100vh - 320px))'},650);
+  setTimeout(()=>busy=false,1400)}
+$$('#links a').forEach(a=>a.onclick=()=>go(a.dataset.p));
+$('#themeSw').onclick=e=>{e.target.classList.toggle('on');document.documentElement.dataset.theme=e.target.classList.contains('on')?'deep':'light'};
+let pick='admin';
+$$('.role').forEach(b=>b.onclick=()=>{pick=b.dataset.r;$$('.role').forEach(x=>x.classList.toggle('sel',x===b))});
+$$('.mode button').forEach(b=>b.onclick=()=>{S.live=b.dataset.m==='live';$$('.mode button').forEach(x=>x.classList.toggle('sel',x===b));$('#liveBox').style.display=S.live?'block':'none';
+  $('#gateHint').textContent=S.live?'Use the key printed by make_user.py or shown in the Create user card.':'Demo mode needs no key. Leave it empty, or type admin or analyst.'});
+function lock(){try{sessionStorage.removeItem('mr');sessionStorage.removeItem('mrp')}catch(_){}S.role=null;S.key='';$('#key').value='';try{sessionStorage.removeItem('mr');sessionStorage.removeItem('mrKey')}catch(_){}document.body.classList.remove('guest');document.body.classList.add('locked')}
+$('#loginBtn').onclick=()=>sweep(lock);
+$('#key').onkeydown=e=>{if(e.key==='Enter')$('#goBtn').click()};
+$('#goBtn').onclick=async()=>{S.key=$('#key').value.trim();S.base=$('#base').value.replace(/\/$/,'');
+  if(!S.key&&S.live)return toast('Enter your API key.',1);
+  if(!S.live)S.key=S.key||pick;
+  try{if(!S.live){S.role=D.keys[S.key]||(S.key==='admin'?'admin':'analyst')}else{
+      try{await api('/jobs');S.role='admin'}catch(e){if(/ijazat|403|Forbidden/i.test(e.message))S.role='analyst';else throw e}}
+    if(S.role!==pick){const got=S.role;S.role=null;return toast(`This key belongs to an ${got}, not an ${pick}. Choose the matching role.`,1)}
+    $('#modeTag').textContent=S.live?'Live':'Demo';$('#loginBtn').textContent='Sign out ('+S.role+')';
+    try{sessionStorage.setItem('mr',JSON.stringify({live:S.live,key:S.key,base:S.base,role:S.role,pick}))}catch(_){}
+    sweep(()=>{document.body.classList.remove('locked','guest');show('home')});toast('Signed in as '+S.role);
+    const h=await api('/');$('#s1').textContent=Number(h.transactions_in_db).toLocaleString();
+  }catch(e){S.role=null;toast(e.message==='Failed to fetch'?'Cannot reach the API. Is it running, and is CORS enabled?':e.message,1)}};
+
+/* ---------- pages ---------- */
+function gauge(r){const pct=Math.min(r.score,1)*100,t=Math.min(r.threshold,1)*100;
+  return `<div class="gauge"><i class="t" style="left:${t}%"></i><i id="gp" style="left:0"></i></div>
+  <p><span class="pill ${r.is_suspicious?'bad':'ok'}">${r.is_suspicious?'Suspicious':'Looks normal'}</span> score <b>${r.score}</b> · threshold ${r.threshold} · ${r.transactions_seen} transactions seen</p>`}
+function showGauge(el,r,label){el.innerHTML=(label?`<h3 style="margin-top:1rem">${label}: ${esc(r.account)}</h3>`:'')+gauge(r);const g=el.querySelector('#gp');g.removeAttribute('id');requestAnimationFrame(()=>requestAnimationFrame(()=>g.style.left=`calc(${Math.min(r.score,1)*100}% - 3px)`))}
+$('#scoreBtn').onclick=e=>run(e.target,async()=>{const a=$('#acc').value.trim();if(!a)return toast('Enter an account ID.',1);showGauge($('#scoreOut'),await api('/score/'+encodeURIComponent(a)))});
+$('#txBtn').onclick=e=>run(e.target,async()=>{const b={sender:$('#tS').value.trim(),receiver:$('#tR').value.trim(),amount:+$('#tA').value,fmt:$('#tF').value,cur_paid:$('#tC').value};
+  if(!b.sender||!b.receiver||!(b.amount>0))return toast('Enter sender, receiver and an amount above 0.',1);
+  const r=await api('/transactions','POST',b);toast('Transaction saved.');const o=$('#txOut');o.innerHTML='<div id="a"></div><div id="b"></div>';
+  r.sender?showGauge(o.querySelector('#a'),r.sender,'Sender'):0;r.receiver?showGauge(o.querySelector('#b'),r.receiver,'Receiver'):0});
+$('#ringBtn').onclick=e=>run(e.target,async()=>{const rs=await api('/rings?min_size='+(+$('#minS').value||3));
+  $('#ringList').innerHTML=rs.length?rs.map(r=>`<div class="card"><h3>Ring ${esc(r.ring_id)} <span class="pill">${esc(r.size)} accounts</span></h3>
+  <div class="chips">${r.accounts.slice(0,24).map(a=>`<span>${esc(a)}</span>`).join('')}${r.accounts.length>24?`<span>+${r.accounts.length-24} more</span>`:''}</div>
+  <p class="sub">${Object.entries(r).filter(([k,v])=>!['ring_id','size','accounts'].includes(k)&&typeof v!=='object').map(([k,v])=>esc(k.replace(/_/g,' '))+': <b>'+esc(v)+'</b>').join(' · ')}</p>
+  <p style="margin-top:.8rem"><button class="btn" onclick="genCase(${+r.ring_id},this)">Generate case report</button></p></div>`).join(''):'<p class="msg">No rings at this size. Try a smaller minimum.</p>'});
+async function genCase(id,b){run(b,async()=>{const r=await api('/cases/generate/'+id,'POST');toast(r.note?`Case ${r.case_id} already exists (${r.status}).`:`Case ${r.case_id} created and waiting for review.`)})}
+async function loadCases(){if(!S.role){$('#caseList').innerHTML='<p class="msg">Sign in to view cases.</p>';return}
+  $$('#caseTabs .btn').forEach(b=>b.classList.toggle('ghost',b.dataset.s!==S.st));
+  try{const cs=await api('/cases?status='+S.st);$('#caseList').innerHTML=cs.length?cs.map(c=>`<div class="card"><h3>Case ${c.case_id} · Ring ${esc(c.ring_id)} <span class="pill ${c.status==='APPROVED'?'bad':c.status==='REJECTED'?'ok':''}">${esc(c.status)}</span></h3>
+  <p class="sub">${c.accounts.length} accounts · created ${esc(c.created_at)}</p><div class="chips">${c.accounts.slice(0,12).map(a=>`<span>${esc(a)}</span>`).join('')}</div><pre class="rep">${esc(c.report)}</pre>
+  ${c.status==='PENDING'?`<button class="btn ok" onclick="decide(${c.case_id},'approve',this)">Approve as mule ring</button> <button class="btn bad" onclick="decide(${c.case_id},'reject',this)">Reject</button>`:''}</div>`).join(''):'<p class="msg">No '+S.st.toLowerCase()+' cases. Generate one from the Rings page.</p>'}catch(e){toast(e.message,1)}}
+$$('#caseTabs .btn').forEach(b=>b.onclick=()=>{S.st=b.dataset.s;loadCases()});
+function decide(id,act,b){run(b,async()=>{const r=await api(`/cases/${id}/${act}`,'POST');toast(`Case ${id} ${r.status.toLowerCase()}; ${r.accounts_labelled} accounts labelled.`);loadCases()})}
+const auditTable=a=>a.length?`<table><tr><th>Time</th><th>User</th><th>Action</th><th>Detail</th></tr>${a.map(x=>`<tr><td>${esc(x.ts)}</td><td>${esc(x.user)}</td><td><span class="pill">${esc(x.action)}</span></td><td>${esc(x.detail)}</td></tr>`).join('')}</table>`:'<p class="msg">No activity yet.</p>';
+async function loadDash(){let h={transactions_in_db:'–'},pend='–',rg='–';
+  if(S.role){try{h=await api('/');pend=(await api('/cases?status=PENDING')).length;rg=(await api('/rings?min_size=3')).length}catch(e){}}
+  $('#dashCards').innerHTML=[['Transactions',Number(h.transactions_in_db)?Number(h.transactions_in_db).toLocaleString():'–'],['Pending cases',pend],['Rings (size 3+)',rg]].map(x=>`<div class="stat card"><b>${x[1]}</b>${x[0]}</div>`).join('');
+  if(S.role==='admin'){try{$('#dashAudit').innerHTML=auditTable((await api('/audit?limit=8')))}catch(e){}}}
+async function loadAdmin(){loadUsers();try{$('#audit').innerHTML=auditTable(await api('/audit?limit=50'));jobs()}catch(e){toast(e.message,1)}}
+async function jobs(){try{const j=await api('/jobs');$('#jobs').innerHTML=Object.entries(j).map(([k,v])=>`<p><b>${k}</b> <span class="pill ${v.state==='failed'?'bad':v.state==='done'?'ok':''}">${v.state}</span> ${v.model_replaced?'· new model loaded':''}</p>${v.output_tail?`<pre class="rep" style="max-height:120px">${esc(v.output_tail)}</pre>`:''}`).join('');
+  if(Object.values(j).some(v=>v.state==='running'))setTimeout(()=>cur==='admin'&&jobs(),3000);else if(cur==='admin')$('#audBtn').click()}catch(e){}}
+$('#lblBtn').onclick=e=>run(e.target,async()=>{const a=$('#lA').value.trim();if(!a)return toast('Enter an account ID.',1);await api('/label','POST',{account:a,is_mule:+$('#lM').value});toast('Label saved.')});
+async function loadUsers(){try{const u=await api('/users');
+  $('#userList').innerHTML=u.length?`<table><tr><th>Username</th><th>Role</th><th></th></tr>${u.map(x=>`<tr><td>${esc(x.username)}</td><td><span class="pill">${esc(x.role)}</span></td><td><button class="btn bad" data-u="${esc(x.username)}" style="padding:.3rem .9rem">Delete</button></td></tr>`).join('')}</table>`:'<p class="msg">No users.</p>';
+  $$('#userList [data-u]').forEach(b=>b.onclick=()=>{const n=b.dataset.u;if(!confirm(`Delete user "${n}"? Their API key will stop working immediately.`))return;
+    run(b,async()=>{await api('/users/'+encodeURIComponent(n),'DELETE');toast(`User ${n} deleted.`);loadUsers()})})}catch(e){toast(e.message,1)}}
+$('#usrBtn').onclick=e=>run(e.target,loadUsers);
+function showKey(r){$('#userOut').innerHTML=`<div class="card" style="margin-top:1rem;border-color:var(--sky)"><p><b>${esc(r.username)}</b> created as <span class="pill">${esc(r.role)}</span></p><p class="sub">Copy this key now. It stays on this screen until you click Done, and it cannot be shown again after that.</p><pre class="rep" id="newKey" style="max-height:none;word-break:break-all">${esc(r.api_key)}</pre><button class="btn ghost" id="cpBtn">Copy key</button> <button class="btn" id="doneBtn">Done, I saved it</button></div>`;
+  $('#cpBtn').onclick=async()=>{try{await navigator.clipboard.writeText(r.api_key);toast('Key copied.')}catch(_){const s=getSelection(),g=document.createRange();g.selectNodeContents($('#newKey'));s.removeAllRanges();s.addRange(g);toast('Press Ctrl+C to copy the selected key.')}};
+  $('#doneBtn').onclick=()=>{try{sessionStorage.removeItem('mrKey')}catch(_){}$('#userOut').innerHTML=''}}
+$('#userBtn').onclick=e=>run(e.target,async()=>{const n=$('#uN').value.trim();if(!/^[\w.-]{3,40}$/.test(n))return toast('Username: 3 to 40 letters, numbers, dot, dash or underscore.',1);
+  const r=await api('/users','POST',{username:n,role:$('#uR').value});$('#uN').value='';
+  try{sessionStorage.setItem('mrKey',JSON.stringify(r))}catch(_){}showKey(r);toast('User created.');loadUsers()});
+$('#reloadBtn').onclick=e=>run(e.target,async()=>{const r=await api('/reload-model','POST');toast('Model reloaded. Threshold '+r.threshold)});
+$('#retrainBtn').onclick=e=>run(e.target,async()=>{await api('/retrain','POST');toast('Retraining started.');jobs()});
+$('#refRingBtn').onclick=e=>run(e.target,async()=>{await api('/rings/refresh?rebuild_features='+$('#rebuild').checked,'POST');toast('Ring refresh started.');jobs()});
+$('#audBtn').onclick=e=>run(e.target,async()=>{$('#audit').innerHTML=auditTable(await api('/audit?limit=50'))});
+
+/* individual features */
+const RISK={HIGH:'bad',MEDIUM:'',LOW:'ok'},VERD={SCAM:['bad','Likely a scam'],SUSPICIOUS:['','Suspicious'],LIKELY_SAFE:['ok','No clear scam signs found'],PROMOTIONAL:['','Looks promotional, not fraud']};
+const ul=a=>a&&a.length?`<ul class="pt">${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
+$('#guestBtn').onclick=()=>{S.base=$('#base').value.replace(/\/$/,'');S.key='';S.role='guest';
+  try{sessionStorage.setItem('mr',JSON.stringify({live:S.live,key:'',base:S.base,role:'guest'}))}catch(_){}
+  $('#modeTag').textContent=S.live?'Live':'Demo';$('#loginBtn').textContent='Sign out (guest)';
+  sweep(()=>{document.body.classList.remove('locked');document.body.classList.add('guest');show('check')});toast('Welcome. These checks need no account.')};
+$('#cU').onkeydown=e=>{if(e.key==='Enter')$('#chkBtn').click()};
+$('#chkBtn').onclick=e=>run(e.target,async()=>{const u=$('#cU').value.trim();if(!u)return toast('Enter a UPI ID or mobile number.',1);
+  const r=await api('/public/check?upi='+encodeURIComponent(u));
+  $('#chkOut').innerHTML=`<div style="margin-top:1rem"><span class="pill ${RISK[r.risk]||''}">${esc(r.label)}</span><p style="margin:.6rem 0"><b>${esc(r.summary)}</b></p>${ul(r.reasons)}<p class="sub" style="font-size:.9rem">Community reports: ${+r.approved_reports} confirmed, ${+r.pending_reports} awaiting review.</p><button class="btn ghost" id="repOpen" style="margin-top:.6rem">Report this ID as a scam</button><div id="repBox"></div></div>`;
+  $('#repOpen').onclick=()=>{$('#repBox').innerHTML=`<label for="rC">What happened?</label><select id="rC"><option value="fake_kyc">Fake KYC or account block</option><option value="pay_to_receive">Asked me to pay to receive money</option><option value="job_task">Job or task scam</option><option value="lottery_prize">Lottery, prize or refund</option><option value="impersonation">Pretended to be someone I know</option><option value="mule_rent">Asked to rent my account</option><option value="other">Something else</option></select><label for="rN">Details (optional, no personal data)</label><input id="rN" maxlength="200"><p style="margin-top:.8rem"><button class="btn" id="repSend">Submit report</button></p>`;
+    $('#repSend').onclick=ev=>run(ev.target,async()=>{await api('/public/report','POST',{upi:u,category:$('#rC').value,note:$('#rN').value});toast('Report sent for review. Thank you.');$('#repBox').innerHTML=''})}});
+$('#msgBtn').onclick=e=>run(e.target,async()=>{const t=$('#msgTxt').value.trim();if(t.length<10)return toast('Paste the full message (at least 10 characters).',1);
+  const r=await api('/public/analyze-message','POST',{text:t}),v=VERD[r.verdict]||['','Unclear'];
+  $('#msgOut').innerHTML=`<div class="card" style="margin-top:1.2rem"><span class="pill ${v[0]}">${v[1]}</span> <b>${esc(r.scam_type||'')}</b>${r.explanation?`<p style="margin:.6rem 0">${esc(r.explanation)}</p>`:''}${r.red_flags&&r.red_flags.length?`<h3 style="margin-top:.8rem">Red flags</h3>${ul(r.red_flags)}`:''}${r.model_scores?`<p class="sub" style="font-size:.9rem;margin-top:.6rem">Trained model: scam ${Math.round(r.model_scores.scam*100)}%, promotional ${Math.round(r.model_scores.promo*100)}%, genuine ${Math.round(r.model_scores.genuine*100)}%</p>`:''}<h3 style="margin-top:.8rem">What to do</h3>${ul(r.what_to_do)}</div>`});
+/* hero bubbles + count-up */
+(()=>{const h=$('#hero');for(let i=0;i<14;i++){const b=document.createElement('span');b.className='bub';const s=8+Math.random()*22;b.style.cssText=`left:${Math.random()*100}%;width:${s}px;height:${s}px;animation-duration:${9+Math.random()*10}s;animation-delay:${-Math.random()*12}s`;h.append(b)}})();
+$('#s1').textContent='184,230';
+if(location.pathname==='/app')$('#base').value=location.origin;
+try{const m=JSON.parse(sessionStorage.getItem('mr')||'null');if(m&&m.role){Object.assign(S,m);if(m.pick)pick=m.pick;document.body.classList.remove('locked');document.body.classList.toggle('guest',S.role==='guest');$('#modeTag').textContent=S.live?'Live':'Demo';$('#loginBtn').textContent='Sign out ('+S.role+')';
+  const pg=sessionStorage.getItem('mrp');if(pg)show(pg);api('/').then(h=>$('#s1').textContent=Number(h.transactions_in_db).toLocaleString()).catch(()=>{})}}catch(_){}
+try{const k=JSON.parse(sessionStorage.getItem('mrKey')||'null');if(k&&S.role==='admin')showKey(k)}catch(_){}
+</script>
+</body>
+</html>

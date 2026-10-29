@@ -1,0 +1,11 @@
+Rule 1 - Fan-in: an account receiving funds from many unrelated senders in a short time should be reviewed as a possible collection mule.
+
+Rule 2 - Fan-out: an account that quickly disperses received funds to many accounts indicates possible layering.
+
+Rule 3 - Chain or pass-through: funds that move from account to account in a chain, with little balance retained, indicate possible layering.
+
+Rule 4 - Cycle or circular flow: funds that return to the originating accounts or move in a closed group indicate possible layering.
+
+Rule 5 - Multiple channels: use of many payment formats or currencies within one group of accounts increases suspicion.
+
+Rule 6 - Human review: no account may be frozen or reported without approval from an authorised officer.
